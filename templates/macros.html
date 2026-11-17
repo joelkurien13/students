@@ -1,0 +1,90 @@
+{% macro icon(name) %}
+<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  {% if name == "dashboard" %}
+  <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/>
+  {% elif name == "add" %}
+  <path d="M12 5v14M5 12h14"/>
+  {% elif name == "records" %}
+  <path d="M8 6h11M8 12h11M8 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>
+  {% elif name == "search" %}
+  <circle cx="11" cy="11" r="6"/><path d="m20 20-3.5-3.5"/>
+  {% elif name == "reports" %}
+  <path d="M4 19V5M4 19h16"/><path d="M8 16v-5M12 16V8M16 16v-3"/>
+  {% elif name == "alert" %}
+  <path d="M12 4 3 19h18z"/><path d="M12 9v5"/><path d="M12 17h.01"/>
+  {% elif name == "download" %}
+  <path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/>
+  {% endif %}
+</svg>
+{% endmacro %}
+
+{% macro grade_badge(grade) %}
+{% set classes = {"A+": "aplus", "A": "a", "B": "b", "C": "c", "D": "d", "E": "e", "F": "f"} %}
+<span class="badge grade-{{ classes.get(grade, 'f') }}">{{ grade }}</span>
+{% endmacro %}
+
+{% macro status_badge(status) %}
+<span class="badge status-{{ (status or 'fail')|lower }}">{{ status }}</span>
+{% endmacro %}
+
+{% macro error_box(errors) %}
+{% if errors %}
+<div class="flash flash-error" role="alert">
+  <strong>Please fix the following:</strong>
+  <ul>
+    {% for error in errors %}
+    <li>{{ error }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro student_table(records) %}
+<p class="scroll-hint">Swipe sideways to see every column.</p>
+<div class="table-wrap">
+  <table>
+    <caption class="sr-only">Student marks, totals, grades, and actions</caption>
+    <thead>
+      <tr>
+        <th scope="col">Roll</th>
+        <th scope="col">Student</th>
+        {% for subject in subjects %}
+        <th scope="col">{{ subject }}</th>
+        {% endfor %}
+        <th scope="col">Total</th>
+        <th scope="col">Percentage</th>
+        <th scope="col">Grade</th>
+        <th scope="col">Status</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for student in records %}
+      <tr>
+        <td>{{ student.roll_no }}</td>
+        <td>
+          <a class="name-link" href="{{ url_for('student_details', roll_no=student.roll_no) }}">{{ student.name }}</a>
+        </td>
+        {% for subject in subjects %}
+        <td class="{% if student.marks[subject] < pass_mark %}mark-low{% endif %}">{{ student.marks[subject] | mark }}</td>
+        {% endfor %}
+        <td>{{ student.total | mark }}/{{ student.maximum }}</td>
+        <td>{{ student.percentage | pct }}%</td>
+        <td>{{ grade_badge(student.grade) }}</td>
+        <td>{{ status_badge(student.status) }}</td>
+        <td>
+          <div class="action-row">
+            <a class="btn btn-small btn-secondary" href="{{ url_for('student_details', roll_no=student.roll_no) }}">View</a>
+            <a class="btn btn-small btn-secondary" href="{{ url_for('edit_student', roll_no=student.roll_no) }}">Edit</a>
+            <form method="post" action="{{ url_for('delete_student', roll_no=student.roll_no) }}" onsubmit="return confirm({{ ('Delete ' ~ student.name ~ ' (Roll ' ~ student.roll_no ~ ')? This cannot be undone.') | tojson }});">
+              <button class="btn btn-small btn-danger" type="submit">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}

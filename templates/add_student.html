@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "macros.html" import error_box %}
+{% block title %}Add Student{% endblock %}
+{% block page_heading %}Add Student{% endblock %}
+
+{% block content %}
+<p class="page-intro">Record a new student and their marks in all five subjects. Roll numbers must be unique, and each mark must be from 0 to 100.</p>
+<div class="split">
+  <form class="card form-card" method="post" action="{{ url_for('add_student') }}" novalidate>
+    {{ error_box(errors) }}
+    <fieldset>
+      <legend>Student details</legend>
+      <div class="form-grid">
+        <label>
+          Student name
+          <input type="text" name="name" value="{{ form.name }}" maxlength="60" required autocomplete="name" placeholder="Priya Nair">
+        </label>
+        <label>
+          Roll number
+          <input type="text" name="roll_no" value="{{ form.roll_no }}" maxlength="20" required autocomplete="off" placeholder="S113">
+        </label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Marks out of 100</legend>
+      <div class="mark-grid">
+        {% for subject in subjects %}
+        <label>
+          {{ subject }}
+          <input type="number" name="{{ mark_fields[subject] }}" value="{{ form.marks[subject] }}" min="0" max="100" step="0.01" required inputmode="decimal">
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Save student</button>
+      <a class="btn btn-secondary" href="{{ url_for('students') }}">Cancel</a>
+    </div>
+    <p class="form-hint">These marks become the official class record. A progress test named Initial Record is saved with the same marks so the trend chart has a starting point.</p>
+  </form>
+
+  <aside class="card help-card">
+    <h2>How the result is decided</h2>
+    <table>
+      <caption class="sr-only">Grade boundaries</caption>
+      <thead>
+        <tr><th scope="col">Percentage</th><th scope="col">Grade</th></tr>
+      </thead>
+      <tbody>
+        {% for band, grade in grade_bands %}
+        <tr><td>{{ band }}</td><td>{{ grade }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p>A student passes only with at least {{ pass_mark }} in every subject. The grade still follows the overall percentage, so a strong total can be a fail if one subject is short.</p>
+  </aside>
+</div>
+{% endblock %}

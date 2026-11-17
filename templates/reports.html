@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% from "macros.html" import grade_badge, status_badge %}
+{% block title %}Performance Reports{% endblock %}
+{% block page_heading %}Performance Reports{% endblock %}
+
+{% block content %}
+<div class="section-head">
+  <p class="page-intro">A class-wide report: averages, the top and lowest percentages, grade counts, and every student who did not pass.</p>
+  <a class="btn btn-primary no-print" href="{{ url_for('export_csv') }}">Export CSV</a>
+</div>
+
+<section class="stat-grid">
+  <article class="stat-card">
+    <p>Total students</p>
+    <strong>{{ stats.total_students }}</strong>
+    <span>Included in this report</span>
+  </article>
+  <article class="stat-card">
+    <p>Class average</p>
+    <strong>{{ stats.class_average | pct }}%</strong>
+    <span>Mean of student percentages</span>
+  </article>
+  <article class="stat-card">
+    <p>Highest percentage</p>
+    <strong>{{ stats.highest_percentage | pct }}%</strong>
+    <span>{% if stats.topper %}{{ stats.topper.name }} · {{ stats.topper.roll_no }}{% else %}No students yet{% endif %}</span>
+  </article>
+  <article class="stat-card">
+    <p>Lowest percentage</p>
+    <strong>{{ stats.lowest_percentage | pct }}%</strong>
+    <span>{% if stats.lowest %}{{ stats.lowest.name }} · {{ stats.lowest.roll_no }}{% else %}No students yet{% endif %}</span>
+  </article>
+  <article class="stat-card">
+    <p>Pass percentage</p>
+    <strong>{{ stats.pass_percentage | pct }}%</strong>
+    <span>{{ stats.passed_count }} passed · {{ stats.failed_count }} failed</span>
+  </article>
+</section>
+
+{% if stats.topper %}
+<section class="pair">
+  <article class="card person-card">
+    <p class="eyebrow">Topper</p>
+    <h2><a class="name-link" href="{{ url_for('student_details', roll_no=stats.topper.roll_no) }}">{{ stats.topper.name }}</a></h2>
+    <p>Roll {{ stats.topper.roll_no }} · {{ stats.topper.percentage | pct }}% · Grade {{ stats.topper.grade }} · {{ stats.topper.status }}</p>
+  </article>
+  <article class="card person-card">
+    <p class="eyebrow">Lowest percentage</p>
+    <h2><a class="name-link" href="{{ url_for('student_details', roll_no=stats.lowest.roll_no) }}">{{ stats.lowest.name }}</a></h2>
+    <p>Roll {{ stats.lowest.roll_no }} · {{ stats.lowest.percentage | pct }}% · Grade {{ stats.lowest.grade }} · {{ stats.lowest.status }}</p>
+  </article>
+</section>
+{% endif %}
+
+{% if has_students %}
+<section class="chart-grid">
+  <article class="card">
+    <h2>Subject-wise average marks</h2>
+    <p class="card-copy">Class mean in each subject, out of 100.</p>
+    <div class="chart-box"><canvas id="subjectChart" aria-label="Bar chart of subject averages"></canvas></div>
+  </article>
+  <article class="card">
+    <h2>Grade distribution</h2>
+    <p class="card-copy">Count of students in each grade.</p>
+    <div class="chart-box"><canvas id="gradeChart" aria-label="Doughnut chart of grades"></canvas></div>
+  </article>
+</section>
+<script id="class-chart-data" type="application/json">{{ chart_data | tojson }}</script>
+{% endif %}
+
+<div class="split">
+  <section class="card">
+    <h2>Subject averages</h2>
+    <div class="table-wrap">
+      <table>
+        <caption class="sr-only">Average marks by subject</caption>
+        <thead>
+          <tr><th scope="col">Subject</th><th scope="col">Average</th></tr>
+        </thead>
+        <tbody>
+          {% for subject in subjects %}
+          <tr>
+            <td>{{ subject }}</td>
+            <td>{{ stats.subject_averages[subject] | mark }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Students in each grade</h2>
+    <div class="table-wrap">
+      <table>
+        <caption class="sr-only">Grade boundaries and counts</caption>
+        <thead>
+          <tr><th scope="col">Grade</th><th scope="col">Percentage</th><th scope="col">Students</th></tr>
+        </thead>
+        <tbody>
+          {% for band, grade in grade_bands %}
+          <tr>
+            <td>{{ grade_badge(grade) }}</td>
+            <td>{{ band }}</td>
+            <td>{{ stats.grade_counts[grade] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Students who failed</h2>
+  <p class="card-copy">A fail means at least one subject is below {{ pass_mark }}, even if the overall percentage looks strong.</p>
+  {% if stats.failed_students %}
+  <div class="table-wrap">
+    <table>
+      <caption class="sr-only">Students who did not pass</caption>
+      <thead>
+        <tr>
+          <th scope="col">Roll</th>
+          <th scope="col">Student</th>
+          <th scope="col">Percentage</th>
+          <th scope="col">Grade</th>
+          <th scope="col">Subjects below {{ pass_mark }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in stats.failed_students %}
+        <tr>
+          <td>{{ student.roll_no }}</td>
+          <td><a class="name-link" href="{{ url_for('student_details', roll_no=student.roll_no) }}">{{ student.name }}</a></td>
+          <td>{{ student.percentage | pct }}%</td>
+          <td>{{ grade_badge(student.grade) }} {{ status_badge(student.status) }}</td>
+          <td>
+            {% for subject in subjects %}
+            {% if student.marks[subject] < pass_mark %}
+            <span class="chip chip-danger">{{ subject }} {{ student.marks[subject] | mark }}</span>
+            {% endif %}
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty inline-empty">{% if has_students %}Every student scored at least {{ pass_mark }} in every subject.{% else %}Add students to build this report.{% endif %}</p>
+  {% endif %}
+</section>
+{% endblock %}

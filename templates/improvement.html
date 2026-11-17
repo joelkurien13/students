@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "macros.html" import grade_badge, status_badge %}
+{% block title %}Improvement Required{% endblock %}
+{% block page_heading %}Improvement Required{% endblock %}
+
+{% block content %}
+<section class="rule-banner">
+  <h2>Who needs attention</h2>
+  <p>The threshold is {{ improvement_threshold }}%. A student is listed when the overall percentage is below that, or when any subject is below {{ pass_mark }}.</p>
+</section>
+
+{% if total_students == 0 %}
+<section class="empty-state">
+  <h2>No class data yet</h2>
+  <p>Add students before the improvement list can be built.</p>
+  <a class="btn btn-primary" href="{{ url_for('add_student') }}">Add student</a>
+</section>
+{% elif rows %}
+<p class="result-count">{{ rows|length }} of {{ total_students }} {{ 'student needs' if rows|length == 1 else 'students need' }} improvement.</p>
+<div class="callout-list">
+  {% for row in rows %}
+  <article class="card student-callout">
+    <header>
+      <div>
+        <h2><a class="name-link" href="{{ url_for('student_details', roll_no=row.roll_no) }}">{{ row.name }}</a></h2>
+        <p class="card-copy">Roll {{ row.roll_no }}</p>
+      </div>
+      <div class="callout-stats">
+        {{ grade_badge(row.grade) }}
+        {{ status_badge(row.status) }}
+        <strong>{{ row.percentage | pct }}%</strong>
+      </div>
+    </header>
+    <ul class="reason-list">
+      {% for reason in row.improvement.reasons %}
+      <li>{{ reason }}</li>
+      {% endfor %}
+    </ul>
+    <div class="chips">
+      {% for item in row.improvement.low_subjects %}
+      <span class="chip {% if item.weakest %}chip-warn{% else %}chip-danger{% endif %}">
+        {{ item.subject }} · {{ item.marks | mark }}
+        {% if item.weakest %} · weakest subject{% else %} · below {{ pass_mark }}{% endif %}
+      </span>
+      {% endfor %}
+    </div>
+    <p class="suggestion">{{ row.improvement.message }}</p>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<section class="empty-state">
+  <h2>No one is below the line</h2>
+  <p>Every student is at or above {{ improvement_threshold }}% and has at least {{ pass_mark }} in each subject.</p>
+</section>
+{% endif %}
+{% endblock %}

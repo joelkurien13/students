@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from "macros.html" import grade_badge, status_badge %}
+{% block title %}{{ student.name }}{% endblock %}
+{% block page_heading %}Student Details{% endblock %}
+
+{% block content %}
+<section class="card profile-head">
+  <div>
+    <p class="eyebrow">Roll {{ student.roll_no }}</p>
+    <h2>{{ student.name }}</h2>
+    <p class="rule">Grade follows overall percentage. Pass needs at least {{ pass_mark }} in every subject, so a high percentage can still be a fail.</p>
+  </div>
+  <div class="action-row no-print">
+    <a class="btn btn-secondary" href="{{ url_for('edit_student', roll_no=student.roll_no) }}">Edit</a>
+    <a class="btn btn-secondary" href="{{ url_for('student_progress', roll_no=student.roll_no) }}">Progress</a>
+    <form method="post" action="{{ url_for('delete_student', roll_no=student.roll_no) }}" onsubmit="return confirm({{ ('Delete ' ~ student.name ~ ' (Roll ' ~ student.roll_no ~ ')? This cannot be undone.') | tojson }});">
+      <button class="btn btn-danger" type="submit">Delete</button>
+    </form>
+  </div>
+</section>
+
+<section class="stat-grid stat-grid-compact">
+  <article class="stat-card">
+    <p>Total marks</p>
+    <strong>{{ student.total | mark }}</strong>
+    <span>Out of {{ student.maximum }}</span>
+  </article>
+  <article class="stat-card">
+    <p>Percentage</p>
+    <strong>{{ student.percentage | pct }}%</strong>
+    <span>Across {{ subjects|length }} subjects</span>
+  </article>
+  <article class="stat-card">
+    <p>Grade</p>
+    <strong>{{ student.grade }}</strong>
+    <span>{{ grade_badge(student.grade) }}</span>
+  </article>
+  <article class="stat-card">
+    <p>Status</p>
+    <strong>{{ student.status }}</strong>
+    <span>{{ status_badge(student.status) }}</span>
+  </article>
+</section>
+
+<div class="split">
+  <section class="card">
+    <h2>Subject marks</h2>
+    <div class="table-wrap">
+      <table>
+        <caption class="sr-only">Marks by subject for {{ student.name }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Subject</th>
+            <th scope="col">Marks</th>
+            <th scope="col">Out of</th>
+            <th scope="col">Level</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for subject in subjects %}
+          <tr>
+            <td>{{ subject }}</td>
+            <td class="{% if student.marks[subject] < pass_mark %}mark-low{% endif %}">{{ student.marks[subject] | mark }}</td>
+            <td>100</td>
+            <td>
+              <div class="meter" aria-hidden="true"><span style="width: {{ student.marks[subject] }}%"></span></div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Against the class</h2>
+    <p class="card-copy">This student’s marks next to the class average for the same subject.</p>
+    <div class="chart-box"><canvas id="studentChart" aria-label="Bar chart comparing student marks with class averages"></canvas></div>
+  </section>
+</div>
+<script id="student-chart-data" type="application/json">{{ chart_data | tojson }}</script>
+{% endblock %}

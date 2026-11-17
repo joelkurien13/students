@@ -1,0 +1,105 @@
+{% from "macros.html" import icon %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#10243e">
+  <title>{% block title %}Dashboard{% endblock %} · Student Performance</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=3) }}">
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <div class="sidebar-backdrop" id="backdrop" hidden></div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">AO</span>
+        <span>
+          <strong>Academic Office</strong>
+          <small>Student performance</small>
+        </span>
+      </div>
+      <nav class="side-nav" aria-label="Main">
+        {% for item in nav_items %}
+        {% set active = request.endpoint == item.endpoint or (item.endpoint == 'students' and request.endpoint in record_endpoints) %}
+        <a href="{{ url_for(item.endpoint) }}" class="{% if active %}active{% endif %}" {% if active %}aria-current="page"{% endif %}>
+          {{ icon(item.icon) }}
+          <span>{{ item.label }}</span>
+        </a>
+        {% endfor %}
+      </nav>
+      <p class="side-note">Pass mark is {{ pass_mark }} in every subject. Improvement threshold is {{ improvement_threshold }}%.</p>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="topbar-title">
+          <p class="eyebrow">Academic office · {{ today_display }}</p>
+          <h1>{% block page_heading %}Dashboard{% endblock %}</h1>
+        </div>
+        <div class="topbar-meta">
+          <form class="global-search" method="get" action="{{ url_for('search') }}" role="search">
+            <label class="sr-only" for="globalSearch">Search students</label>
+            {{ icon("search") }}
+            <input id="globalSearch" type="search" name="q" placeholder="Find…" autocomplete="off">
+            <button type="submit">Search</button>
+          </form>
+          <span class="year-pill">{{ academic_year }}</span>
+          <div class="user-chip" aria-label="Faculty workspace">
+            <span class="user-avatar" aria-hidden="true">F</span>
+            <span class="user-label"><strong>Faculty</strong><small>Academic office</small></span>
+          </div>
+        </div>
+      </header>
+
+      <main class="content" id="content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-stack">
+          {% for category, message in messages %}
+          <div class="flash flash-{{ category if category in ['success', 'error', 'info'] else 'info' }}" role="status">{{ message }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+        <footer class="page-foot">Student Performance Dashboard · Class records stored in students.json</footer>
+      </main>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/charts.js', v=2) }}"></script>
+  <script>
+    (function () {
+      var sidebar = document.getElementById("sidebar");
+      var toggle = document.getElementById("menuToggle");
+      var backdrop = document.getElementById("backdrop");
+      if (!sidebar || !toggle || !backdrop) return;
+
+      function setOpen(open) {
+        sidebar.classList.toggle("is-open", open);
+        backdrop.hidden = !open;
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+      }
+
+      toggle.addEventListener("click", function () {
+        setOpen(!sidebar.classList.contains("is-open"));
+      });
+      backdrop.addEventListener("click", function () { setOpen(false); });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") setOpen(false);
+      });
+      sidebar.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", function () { setOpen(false); });
+      });
+    })();
+  </script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

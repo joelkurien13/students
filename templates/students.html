@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "macros.html" import student_table with context %}
+{% block title %}Student Records{% endblock %}
+{% block page_heading %}Student Records{% endblock %}
+
+{% block content %}
+<div class="section-head">
+  <p class="page-intro">Every student on roll, with subject marks, total, percentage, grade, and pass or fail. Marks in red are below {{ pass_mark }}.</p>
+  <a class="btn btn-primary no-print" href="{{ url_for('add_student') }}">Add student</a>
+</div>
+
+{% if records %}
+{{ student_table(records) }}
+{% else %}
+<section class="empty-state">
+  <h2>No student records</h2>
+  <p>The class list is empty. Add a student to start the register.</p>
+  <a class="btn btn-primary" href="{{ url_for('add_student') }}">Add student</a>
+</section>
+{% endif %}
+{% endblock %}

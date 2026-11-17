@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "macros.html" import error_box, grade_badge, status_badge %}
+{% block title %}Edit {{ student.name }}{% endblock %}
+{% block page_heading %}Edit Student{% endblock %}
+
+{% block content %}
+<p class="page-intro">Update the official marks used on the dashboard and class report. Saved tests stay as they are. Change those from the progress page.</p>
+<div class="split">
+  <form class="card form-card" method="post" action="{{ url_for('edit_student', roll_no=student.roll_no) }}">
+    {{ error_box(errors) }}
+    <fieldset>
+      <legend>Student details</legend>
+      <div class="form-grid">
+        <label>
+          Student name
+          <input type="text" name="name" value="{{ form.name }}" maxlength="60" required autocomplete="name">
+        </label>
+        <label>
+          Roll number
+          <input type="text" value="{{ student.roll_no }}" readonly aria-readonly="true">
+        </label>
+      </div>
+      <p class="form-hint">The roll number identifies this student, so it stays fixed.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Official marks out of 100</legend>
+      <div class="mark-grid">
+        {% for subject in subjects %}
+        <label>
+          {{ subject }}
+          <input type="number" name="{{ mark_fields[subject] }}" value="{{ form.marks[subject] }}" min="0" max="100" step="0.01" required inputmode="decimal">
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Update student</button>
+      <a class="btn btn-secondary" href="{{ url_for('student_details', roll_no=student.roll_no) }}">Cancel</a>
+    </div>
+  </form>
+  <aside class="card help-card">
+    <h2>Current result</h2>
+    <p class="result-line">{{ grade_badge(student.grade) }} {{ status_badge(student.status) }}</p>
+    <p>{{ student.total | mark }} / {{ student.maximum }} · {{ student.percentage | pct }}%</p>
+    <p>After you save, the grade and pass status are calculated again from the new marks.</p>
+    <a class="btn btn-secondary" href="{{ url_for('student_progress', roll_no=student.roll_no) }}">View progress tests</a>
+  </aside>
+</div>
+{% endblock %}

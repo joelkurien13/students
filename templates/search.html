@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% from "macros.html" import student_table %}
+{% block title %}Search Student{% endblock %}
+{% block page_heading %}Search Student{% endblock %}
+
+{% block content %}
+<p class="page-intro">Find a student by name or roll number. Name search ignores capital letters. Results update as you type, and the form still works if you press Enter.</p>
+
+<form class="card search-card" method="get" action="{{ url_for('search') }}" role="search">
+  <label class="search-label" for="searchInput">Name or roll number</label>
+  <div class="search-row">
+    <input id="searchInput" type="search" name="q" value="{{ query }}" placeholder="Try Priya or S101" maxlength="80" autocomplete="off">
+    <button class="btn btn-primary" type="submit">Search</button>
+  </div>
+</form>
+
+<div id="search-results">
+  {% if not searched %}
+  <section class="empty-state">
+    <h2>Search the class</h2>
+    <p>Enter a full name, part of a name, or a roll number.</p>
+  </section>
+  {% elif matches %}
+  <p class="result-count" id="resultCount">{{ matches|length }} {{ 'student' if matches|length == 1 else 'students' }} found for “{{ query }}”.</p>
+  {{ student_table(matches) }}
+  {% else %}
+  <section class="empty-state">
+    <h2>No student found</h2>
+    <p>Nothing matches “{{ query }}”. Check the spelling, or search a roll number such as S101.</p>
+  </section>
+  {% endif %}
+</div>
+<script id="search-catalog" type="application/json">{{ catalog | tojson }}</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    var input = document.getElementById("searchInput");
+    var results = document.getElementById("search-results");
+    var dataEl = document.getElementById("search-catalog");
+    if (!input || !results || !dataEl) return;
+
+    var catalog = [];
+    try {
+      catalog = JSON.parse(dataEl.textContent);
+    } catch (error) {
+      return;
+    }
+
+    var gradeClass = { "A+": "aplus", "A": "a", "B": "b", "C": "c", "D": "d", "E": "e", "F": "f" };
+
+    function badge(className, text) {
+      var span = document.createElement("span");
+      span.className = className;
+      span.textContent = text;
+      return span;
+    }
+
+    function render(query) {
+      var needle = query.trim().toLowerCase();
+      results.replaceChildren();
+      if (!needle) {
+        var idle = document.createElement("section");
+        idle.className = "empty-state";
+        var idleTitle = document.createElement("h2");
+        idleTitle.textContent = "Search the class";
+        var idleCopy = document.createElement("p");
+        idleCopy.textContent = "Enter a full name, part of a name, or a roll number.";
+        idle.append(idleTitle, idleCopy);
+        results.append(idle);
+        return;
+      }
+
+      var matches = catalog.filter(function (student) {
+        return student.name.toLowerCase().indexOf(needle) !== -1 ||
+          String(student.roll_no).toLowerCase().indexOf(needle) !== -1;
+      });
+      matches.sort(function (a, b) { return a.name.localeCompare(b.name); });
+
+      if (!matches.length) {
+        var empty = document.createElement("section");
+        empty.className = "empty-state";
+        var title = document.createElement("h2");
+        title.textContent = "No student found";
+        var copy = document.createElement("p");
+        copy.textContent = "Nothing matches “" + query.trim() + "”. Check the spelling, or search a roll number such as S101.";
+        empty.append(title, copy);
+        results.append(empty);
+        return;
+      }
+
+      var count = document.createElement("p");
+      count.className = "result-count";
+      count.textContent = matches.length + (matches.length === 1 ? " student" : " students") + " found for “" + query.trim() + "”.";
+      results.append(count);
+
+      var wrap = document.createElement("div");
+      wrap.className = "table-wrap";
+      var table = document.createElement("table");
+      var thead = document.createElement("thead");
+      var headRow = document.createElement("tr");
+      ["Roll", "Student", "Percentage", "Grade", "Status", "Actions"].forEach(function (label) {
+        var th = document.createElement("th");
+        th.scope = "col";
+        th.textContent = label;
+        headRow.append(th);
+      });
+      thead.append(headRow);
+      var tbody = document.createElement("tbody");
+
+      matches.forEach(function (student) {
+        var row = document.createElement("tr");
+        function cell(text) {
+          var td = document.createElement("td");
+          td.textContent = text;
+          return td;
+        }
+        row.append(cell(student.roll_no));
+        var nameCell = document.createElement("td");
+        var link = document.createElement("a");
+        link.className = "name-link";
+        link.href = student.url;
+        link.textContent = student.name;
+        nameCell.append(link);
+        row.append(nameCell);
+        row.append(cell(Number(student.percentage).toFixed(2) + "%"));
+        var gradeCell = document.createElement("td");
+        gradeCell.append(badge("badge grade-" + (gradeClass[student.grade] || "f"), student.grade));
+        row.append(gradeCell);
+        var statusCell = document.createElement("td");
+        statusCell.append(badge("badge status-" + String(student.status).toLowerCase(), student.status));
+        row.append(statusCell);
+
+        var actions = document.createElement("td");
+        var actionRow = document.createElement("div");
+        actionRow.className = "action-row";
+        var view = document.createElement("a");
+        view.className = "btn btn-small btn-secondary";
+        view.href = student.url;
+        view.textContent = "View";
+        var edit = document.createElement("a");
+        edit.className = "btn btn-small btn-secondary";
+        edit.href = student.edit_url;
+        edit.textContent = "Edit";
+        var form = document.createElement("form");
+        form.method = "post";
+        form.action = student.delete_url;
+        form.addEventListener("submit", function (event) {
+          var message = "Delete " + student.name + " (Roll " + student.roll_no + ")? This cannot be undone.";
+          if (!confirm(message)) event.preventDefault();
+        });
+        var button = document.createElement("button");
+        button.className = "btn btn-small btn-danger";
+        button.type = "submit";
+        button.textContent = "Delete";
+        form.append(button);
+        actionRow.append(view, edit, form);
+        actions.append(actionRow);
+        row.append(actions);
+        tbody.append(row);
+      });
+
+      table.append(thead, tbody);
+      wrap.append(table);
+      results.append(wrap);
+    }
+
+    input.addEventListener("input", function () {
+      render(input.value);
+    });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% from "macros.html" import error_box, grade_badge, status_badge %}
+{% block title %}Progress · {{ student.name }}{% endblock %}
+{% block page_heading %}Student Progress{% endblock %}
+
+{% block content %}
+<section class="card profile-head">
+  <div>
+    <p class="eyebrow">Roll {{ student.roll_no }}</p>
+    <h2>{{ student.name }}</h2>
+    <p class="rule">Tests track history. The official class record stays on {{ student.percentage | pct }}% ({{ student.grade }}, {{ student.status }}) unless you choose to update it from a new test.</p>
+  </div>
+  <div class="action-row no-print">
+    <a class="btn btn-secondary" href="{{ url_for('student_details', roll_no=student.roll_no) }}">Full record</a>
+    <a class="btn btn-secondary" href="{{ url_for('edit_student', roll_no=student.roll_no) }}">Edit official marks</a>
+  </div>
+</section>
+
+{% if student.tests %}
+<section class="card">
+  <h2>Performance across tests</h2>
+  <p class="card-copy">The dark line is the overall percentage. The coloured lines are subject marks out of 100.</p>
+  {% if student.tests|length < 2 %}
+  <p class="note">This student has one test so far. Add another to see the line move.</p>
+  {% endif %}
+  <div class="chart-box tall"><canvas id="progressChart" aria-label="Line chart of test performance"></canvas></div>
+</section>
+<script id="progress-chart-data" type="application/json">{{ chart_data | tojson }}</script>
+{% else %}
+<section class="empty-state">
+  <h2>No tests recorded</h2>
+  <p>Add the first test below. The chart appears once a test is saved.</p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Test history</h2>
+  {% if student.tests %}
+  <p class="scroll-hint">Swipe sideways to see every subject.</p>
+  <div class="table-wrap">
+    <table>
+      <caption class="sr-only">Tests recorded for {{ student.name }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Test</th>
+          <th scope="col">Date</th>
+          {% for subject in subjects %}
+          <th scope="col">{{ subject }}</th>
+          {% endfor %}
+          <th scope="col">Total</th>
+          <th scope="col">Percentage</th>
+          <th scope="col">Grade</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for test in student.tests %}
+        <tr>
+          <td>{{ test.test_name }}</td>
+          <td>{{ test.test_date | pretty_date }}</td>
+          {% for subject in subjects %}
+          <td class="{% if test.marks[subject] < pass_mark %}mark-low{% endif %}">{{ test.marks[subject] | mark }}</td>
+          {% endfor %}
+          <td>{{ test.total | mark }}/{{ test.maximum }}</td>
+          <td>{{ test.percentage | pct }}%</td>
+          <td>{{ grade_badge(test.grade) }}</td>
+          <td>{{ status_badge(test.status) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty inline-empty">No tests have been saved for this student.</p>
+  {% endif %}
+</section>
+
+<form id="add-test" class="card form-card" method="post" action="{{ url_for('add_test', roll_no=student.roll_no) }}">
+  <h2>Add a test</h2>
+  {{ error_box(errors) }}
+  <div class="form-grid">
+    <label>
+      Test name
+      <input type="text" name="test_name" value="{{ test_form.test_name }}" maxlength="40" required placeholder="Unit Test 2">
+    </label>
+    <label>
+      Test date
+      <input type="date" name="test_date" value="{{ test_form.test_date }}" required>
+    </label>
+  </div>
+  <div class="mark-grid">
+    {% for subject in subjects %}
+    <label>
+      {{ subject }}
+      <input type="number" name="{{ mark_fields[subject] }}" value="{{ test_form.marks[subject] }}" min="0" max="100" step="0.01" required inputmode="decimal">
+    </label>
+    {% endfor %}
+  </div>
+  <label class="check">
+    <input type="checkbox" name="update_official" value="yes" {% if test_form.update_official %}checked{% endif %}>
+    <span>Also update the official marks used in class reports</span>
+  </label>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Save test</button>
+  </div>
+</form>
+{% endblock %}
